@@ -26,10 +26,6 @@ PROJECT_ROOT = Path(__file__).parent.parent
 INPUT_BASE_DIR = PROJECT_ROOT / "experiment_results"
 
 def transform_to_local_frame(df):
-    """
-    Mentransformasi koordinat dari Base Frame ke Local Frame (Whiteboard).
-    Menerapkan Matriks Rotasi dan Translasi Bounding Box Geometris murni.
-    """
     df_plot = df.copy()
     
     roll = df_plot['ref_pose_roll'].iloc[0]
@@ -60,18 +56,11 @@ def transform_to_local_frame(df):
     return df_plot
 
 def get_drawing_phase_bounds(df_local):
-    """
-    Mendeteksi waktu mulai dan selesai berdasarkan Sumbu Z LOKAL.
-    Menggunakan persentase pergerakan (15% terbawah) untuk menoleransi lengkungan 
-    saat robot menggambar di bidang miring.
-    """
     z_min = df_local['ref_plot_z'].min()
     z_max = df_local['ref_plot_z'].max()
     z_range = z_max - z_min
     
-    # Threshold = Z paling bawah + 15% dari total jarak Hover ke Gambar
     threshold = z_min + (0.15 * z_range)
-    
     drawing_mask = df_local['ref_plot_z'] <= threshold
     
     if drawing_mask.any():
@@ -79,6 +68,36 @@ def get_drawing_phase_bounds(df_local):
         t_end = df_local.loc[drawing_mask, 'time_norm'].max()
         return t_start, t_end
     return None, None
+
+def trim_timeseries(df, df_local, t_start, t_end, pre_margin=2.0, post_margin=2.0):
+    """
+    Memotong rentang waktu dataframe agar hanya fokus pada fase menggambar, 
+    diapit oleh margin waktu diam (hover) yang konsisten.
+    """
+    if t_start is None or t_end is None:
+        return df, df_local, t_start, t_end
+    
+    # Tentukan batas potongan waktu absolut
+    cut_start = max(0, t_start - pre_margin)
+    cut_end = t_end + post_margin
+    
+    # Ekstrak irisan dataframe
+    df_trimmed = df[(df['time_norm'] >= cut_start) & (df['time_norm'] <= cut_end)].copy()
+    df_local_trimmed = df_local[(df_local['time_norm'] >= cut_start) & (df_local['time_norm'] <= cut_end)].copy()
+    
+    if df_trimmed.empty:
+        return df, df_local, t_start, t_end
+        
+    # Reset t=0 pada potongan yang baru
+    time_offset = df_trimmed['time_norm'].iloc[0]
+    df_trimmed['time_norm'] = df_trimmed['time_norm'] - time_offset
+    df_local_trimmed['time_norm'] = df_local_trimmed['time_norm'] - time_offset
+    
+    # Geser referensi batas shading hijau mengikuti t=0 yang baru
+    new_t_start = t_start - time_offset
+    new_t_end = t_end - time_offset
+    
+    return df_trimmed, df_local_trimmed, new_t_start, new_t_end
 
 def plot_2d_trajectory(df_plot, run_name, out_dir):
     fig, ax = plt.subplots(figsize=(8, 6))
@@ -192,9 +211,11 @@ def process_all_timeseries():
         df['time_norm'] = df['time'] - df['time'].iloc[0]
         
         df_local = transform_to_local_frame(df)
-        
-        # Eksekusi deteksi fasa dari dataframe yang sudah disesuaikan dengan kerangka papan
         t_start, t_end = get_drawing_phase_bounds(df_local)
+        
+        # Eksekusi pemotongan temporal
+        if t_start is not None and t_end is not None:
+            df, df_local, t_start, t_end = trim_timeseries(df, df_local, t_start, t_end, pre_margin=2.0, post_margin=2.0)
         
         out_dir = csv_path.parent.parent / "plots" / run_name
         out_dir.mkdir(parents=True, exist_ok=True)
@@ -241,4 +262,4 @@ def plot_summary_trends():
 if __name__ == "__main__":
     process_all_timeseries()
     plot_summary_trends()
-    print("\nSeluruh plot telah berhasil di-generate dengan Local Frame Transformation!")
+    print("\nSeluruh plot telah berhasil di-generate dengan Temporal Cropping!")
