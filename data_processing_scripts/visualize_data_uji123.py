@@ -22,7 +22,8 @@ plt.rcParams.update({
     'grid.alpha': 0.7
 })
 
-INPUT_BASE_DIR = Path(__file__).parent.parent / "experiment_results"
+PROJECT_ROOT = Path(__file__).parent.parent
+INPUT_BASE_DIR = PROJECT_ROOT / "experiment_results"
 
 def transform_to_local_frame(df):
     """
@@ -31,29 +32,23 @@ def transform_to_local_frame(df):
     """
     df_plot = df.copy()
     
-    # 1. Ambil orientasi bidang papan dari target referensi
     roll = df_plot['ref_pose_roll'].iloc[0]
     pitch = df_plot['ref_pose_pitch'].iloc[0]
     yaw = df_plot['ref_pose_yaw'].iloc[0]
     
-    # Matriks Rotasi (Base -> Board) dan Invers-nya
     rot_matrix = R.from_euler('xyz', [roll, pitch, yaw], degrees=False).as_matrix()
     rot_inv = rot_matrix.T
     
-    # 2. Susun titik sebagai matriks vektor murni tanpa translasi
     ref_pts = np.vstack([df_plot['ref_pose_x'], df_plot['ref_pose_y'], df_plot['ref_pose_z']])
     act_pts = np.vstack([df_plot['actual_pose_x'], df_plot['actual_pose_y'], df_plot['actual_pose_z']])
     
-    # 3. Terapkan Matriks Rotasi terlebih dahulu agar sumbu sejajar dengan bidang papan
     ref_rot = rot_inv @ ref_pts
     act_rot = rot_inv @ act_pts
     
-    # 4. Cari Titik Pusat Geometris (Translasi Vector t), BUKAN Temporal Mean
     cx_local = (ref_rot[0, :].max() + ref_rot[0, :].min()) / 2.0
     cy_local = (ref_rot[1, :].max() + ref_rot[1, :].min()) / 2.0
-    cz_local = ref_rot[2, :].mean() # Z tidak terlalu kritis untuk plot 2D
+    cz_local = ref_rot[2, :].mean() 
     
-    # 5. Terapkan Matriks Translasi dan konversi ke milimeter
     df_plot['ref_plot_x'] = (ref_rot[0, :] - cx_local) * 1000
     df_plot['ref_plot_y'] = (ref_rot[1, :] - cy_local) * 1000
     df_plot['ref_plot_z'] = (ref_rot[2, :] - cz_local) * 1000
@@ -64,18 +59,24 @@ def transform_to_local_frame(df):
     
     return df_plot
 
-def get_drawing_phase_bounds(df):
+def get_drawing_phase_bounds(df_local):
     """
-    Mendeteksi waktu mulai dan selesai fase menggambar murni berdasarkan
-    kapan sumbu Z referensi menekan papan tulis (berada di titik terendahnya).
+    Mendeteksi waktu mulai dan selesai berdasarkan Sumbu Z LOKAL.
+    Menggunakan persentase pergerakan (15% terbawah) untuk menoleransi lengkungan 
+    saat robot menggambar di bidang miring.
     """
-    z_min = df['ref_pose_z'].min()
-    # Masking: Fase aktif adalah ketika Z berada dalam toleransi 2 mm dari titik terendah (nempel papan)
-    drawing_mask = df['ref_pose_z'] <= (z_min + 0.002)
+    z_min = df_local['ref_plot_z'].min()
+    z_max = df_local['ref_plot_z'].max()
+    z_range = z_max - z_min
+    
+    # Threshold = Z paling bawah + 15% dari total jarak Hover ke Gambar
+    threshold = z_min + (0.15 * z_range)
+    
+    drawing_mask = df_local['ref_plot_z'] <= threshold
     
     if drawing_mask.any():
-        t_start = df.loc[drawing_mask, 'time_norm'].min()
-        t_end = df.loc[drawing_mask, 'time_norm'].max()
+        t_start = df_local.loc[drawing_mask, 'time_norm'].min()
+        t_end = df_local.loc[drawing_mask, 'time_norm'].max()
         return t_start, t_end
     return None, None
 
@@ -94,40 +95,32 @@ def plot_2d_trajectory(df_plot, run_name, out_dir):
     fig.savefig(out_dir / f"{run_name}_1_trajectory_2d.png", dpi=300)
     plt.close(fig)
 
-def plot_transient_pose(df_plot, run_name, out_dir):
+def plot_transient_pose(df_plot, run_name, out_dir, t_start, t_end):
     fig, axes = plt.subplots(3, 1, figsize=(10, 8), sharex=True)
     t = df_plot['time_norm']
     
-    # Dapatkan batas fase menggambar
-    t_start, t_end = get_drawing_phase_bounds(df_plot)
-    
-    # Sumbu X
     axes[0].plot(t, df_plot['ref_plot_x'], 'k--', label='Ref Local X')
     axes[0].plot(t, df_plot['act_plot_x'], 'b-', label='Actual Local X', alpha=0.7)
     axes[0].set_ylabel("Posisi X (mm)")
     axes[0].legend(loc='upper right')
     
-    # Sumbu Y
     axes[1].plot(t, df_plot['ref_plot_y'], 'k--', label='Ref Local Y')
     axes[1].plot(t, df_plot['act_plot_y'], 'g-', label='Actual Local Y', alpha=0.7)
     axes[1].set_ylabel("Posisi Y (mm)")
     axes[1].legend(loc='upper right')
     
-    # Sumbu Z
     axes[2].plot(t, df_plot['ref_plot_z'], 'k--', label='Ref Local Z')
     axes[2].plot(t, df_plot['act_plot_z'], 'r-', label='Actual Local Z', alpha=0.7)
     axes[2].set_ylabel("Posisi Z (mm)")
     axes[2].set_xlabel("Waktu (s)")
     axes[2].legend(loc='upper right')
     
-    # Suntikkan anotasi Fase Menggambar jika terdeteksi
     if t_start is not None and t_end is not None:
         for ax in axes:
             ax.axvline(t_start, color='gray', linestyle=':', linewidth=1.5)
             ax.axvline(t_end, color='gray', linestyle=':', linewidth=1.5)
             ax.axvspan(t_start, t_end, color='#00FF00', alpha=0.08, label='Fase Gambar')
             
-        # Hindari duplikasi label legend untuk axvspan
         handles, labels = axes[0].get_legend_handles_labels()
         by_label = dict(zip(labels, handles))
         axes[0].legend(by_label.values(), by_label.keys(), loc='upper right')
@@ -157,11 +150,9 @@ def plot_transient_twist(df, run_name, out_dir):
     fig.savefig(out_dir / f"{run_name}_3_transient_twist.png", dpi=300)
     plt.close(fig)
 
-def plot_error_over_time(df, run_name, out_dir):
+def plot_error_over_time(df, run_name, out_dir, t_start, t_end):
     fig, ax = plt.subplots(figsize=(10, 4))
     t = df['time_norm']
-    
-    t_start, t_end = get_drawing_phase_bounds(df)
     
     ax.plot(t, df['error_3d_mm'], 'r-', label='Galat Euclidean 3D')
     
@@ -170,7 +161,6 @@ def plot_error_over_time(df, run_name, out_dir):
         ax.axvline(t_end, color='gray', linestyle=':', linewidth=1.5)
         ax.axvspan(t_start, t_end, color='#00FF00', alpha=0.08, label='Fase Gambar')
         
-        # Hitung rata-rata galat HANYA pada fase menggambar
         drawing_mask = (t >= t_start) & (t <= t_end)
         mean_error = df.loc[drawing_mask, 'error_3d_mm'].mean()
         ax.axhline(mean_error, color='k', linestyle='--', label=f"Mean (Drawing Phase): {mean_error:.2f} mm")
@@ -201,19 +191,18 @@ def process_all_timeseries():
         df = pd.read_csv(csv_path)
         df['time_norm'] = df['time'] - df['time'].iloc[0]
         
-        # Eksekusi Transformasi ke Local Frame (Orientasi + Translasi)
         df_local = transform_to_local_frame(df)
+        
+        # Eksekusi deteksi fasa dari dataframe yang sudah disesuaikan dengan kerangka papan
+        t_start, t_end = get_drawing_phase_bounds(df_local)
         
         out_dir = csv_path.parent.parent / "plots" / run_name
         out_dir.mkdir(parents=True, exist_ok=True)
         
-        # Plot lintasan ruang menggunakan dataframe frame lokal
         plot_2d_trajectory(df_local, run_name, out_dir)
-        plot_transient_pose(df_local, run_name, out_dir)
-        
-        # Plot kontrol/metrik Euclidean menggunakan dataframe asli (karena invarian/absolut)
+        plot_transient_pose(df_local, run_name, out_dir, t_start, t_end)
         plot_transient_twist(df, run_name, out_dir)
-        plot_error_over_time(df, run_name, out_dir)
+        plot_error_over_time(df, run_name, out_dir, t_start, t_end)
 
 def plot_summary_trends():
     speed_csv = INPUT_BASE_DIR / "Summary_Uji_2_Speed.csv"
