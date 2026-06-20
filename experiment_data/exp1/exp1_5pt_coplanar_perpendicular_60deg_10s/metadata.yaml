@@ -1,0 +1,32 @@
+rosbag2_bagfile_information:
+  version: 5
+  storage_identifier: sqlite3
+  duration:
+    nanoseconds: 9713093156
+  starting_time:
+    nanoseconds_since_epoch: 1778229381523946696
+  message_count: 1852
+  topics_with_message_count:
+    - topic_metadata:
+        name: /target_platform_coplanar_5pt/tracking_telemetry
+        type: surface_tracking_interfaces/msg/AlignmentTelemetry
+        serialization_format: cdr
+        offered_qos_profiles: "- history: 1\n  depth: 10\n  reliability: 1\n  durability: 2\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions: false"
+      message_count: 926
+    - topic_metadata:
+        name: /aimooe/tool_info
+        type: aimooe_msgs/msg/ToolArray
+        serialization_format: cdr
+        offered_qos_profiles: "- history: 1\n  depth: 10\n  reliability: 1\n  durability: 2\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions: false"
+      message_count: 926
+  compression_format: ""
+  compression_mode: ""
+  relative_file_paths:
+    - exp1_5pt_coplanar_perpendicular_60deg_10s_0.db3
+  files:
+    - path: exp1_5pt_coplanar_perpendicular_60deg_10s_0.db3
+      starting_time:
+        nanoseconds_since_epoch: 1778229381523946696
+      duration:
+        nanoseconds: 9713093156
+      message_count: 1852
