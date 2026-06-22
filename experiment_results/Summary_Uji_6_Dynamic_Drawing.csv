@@ -1,0 +1,9 @@
+Kategori,Skenario,Pos_RMSE_mm,Pos_MaxErr_mm,Ori_RMSE_deg,Ori_MaxErr_deg,MPC_Phase_Lag_ms,ESKF_Phase_Lag_ms,Noise_Reduction_Ratio,CV_Abs_MAE_mm,CV_Abs_RMSE_mm,CV_Abs_MaxErr_mm,CV_Shape_MAE_mm,CV_Shape_RMSE_mm,CV_Shape_MaxErr_mm,CV_Offset_mm
+Uji_6_Dynamic_Drawing,uji6_square_rotation_slow,9.796,24.486,1.524,4.631,130.002,70.001,1.065,3.399,4.115,10.6,3.04,3.6,8.4,3.001
+Uji_6_Dynamic_Drawing,uji6_square_translation_slow,14.079,98.506,0.199,1.802,30.001,20.0,1.621,2.888,3.25,6.6,2.152,2.444,6.58,3.022
+Uji_6_Dynamic_Drawing,uji6_circle_translation_fast,12.242,33.173,0.333,1.518,40.001,40.001,1.342,6.513,7.689,14.389,5.899,7.011,16.164,4.212
+Uji_6_Dynamic_Drawing,uji6_circle_rotation_slow,12.263,39.735,1.44,4.219,100.002,70.001,1.115,4.386,5.129,10.211,0.835,0.991,2.631,6.984
+Uji_6_Dynamic_Drawing,uji6_circle_rotation_fast,17.223,45.778,5.098,12.953,110.002,80.002,1.086,6.74,7.826,15.148,5.71,6.856,16.3,2.653
+Uji_6_Dynamic_Drawing,uji6_circle_translation_slow,12.1,78.101,0.141,1.72,5900.131,20.0,1.514,2.479,2.973,6.014,1.433,1.689,3.22,1.119
+Uji_6_Dynamic_Drawing,uji6_square_translation_fast,13.421,49.32,0.268,1.873,50.001,50.001,1.348,6.14,7.48,16.1,4.484,5.475,15.59,7.413
+Uji_6_Dynamic_Drawing,uji6_square_rotation_fast,14.645,34.092,3.822,11.237,180.004,70.001,1.077,6.407,7.422,14.834,6.095,6.896,13.4,4.405
