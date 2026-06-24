@@ -1,6 +1,0 @@
-Kategori,Skenario,Pos_RMSE_mm,Pos_MaxErr_mm,Ori_RMSE_deg,Ori_MaxErr_deg,MPC_Phase_Lag_ms,ESKF_Phase_Lag_ms,Noise_Reduction_Ratio,CV_Abs_MAE_mm,CV_Abs_RMSE_mm,CV_Abs_MaxErr_mm,CV_Shape_MAE_mm,CV_Shape_RMSE_mm,CV_Shape_MaxErr_mm,CV_Offset_mm
-Uji_4_Point_Tracking,uji4_translation_fast,34.107,109.504,0.541,2.108,150.005,50.002,1.355,,,,,,,
-Uji_4_Point_Tracking,uji4_translation_slow,7.348,18.367,0.125,0.678,60.001,50.001,1.327,,,,,,,
-Uji_4_Point_Tracking,uji4_rotation_slow,17.594,46.429,8.911,25.903,250.005,20.0,1.05,,,,,,,
-Uji_4_Point_Tracking,uji4_combination,42.29,106.581,9.611,27.705,160.003,60.001,1.052,,,,,,,
-Uji_4_Point_Tracking,uji4_rotation_fast,34.677,87.074,20.076,49.015,180.004,30.001,1.048,,,,,,,
