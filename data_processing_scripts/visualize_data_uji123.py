@@ -5,10 +5,14 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 import os
 from scipy.spatial.transform import Rotation as R
+import warnings
 
-# Konfigurasi gaya plot untuk format akademis
+warnings.filterwarnings('ignore')
+
+# Konfigurasi gaya plot untuk format akademis (Mendukung notasi Math/LaTeX)
 plt.rcParams.update({
     'font.family': 'serif',
+    'mathtext.fontset': 'cm', # Computer Modern (Standar LaTeX)
     'font.size': 11,
     'axes.labelsize': 12,
     'axes.titlesize': 14,
@@ -70,30 +74,22 @@ def get_drawing_phase_bounds(df_local):
     return None, None
 
 def trim_timeseries(df, df_local, t_start, t_end, pre_margin=2.0, post_margin=2.0):
-    """
-    Memotong rentang waktu dataframe agar hanya fokus pada fase menggambar, 
-    diapit oleh margin waktu diam (hover) yang konsisten.
-    """
     if t_start is None or t_end is None:
         return df, df_local, t_start, t_end
     
-    # Tentukan batas potongan waktu absolut
     cut_start = max(0, t_start - pre_margin)
     cut_end = t_end + post_margin
     
-    # Ekstrak irisan dataframe
     df_trimmed = df[(df['time_norm'] >= cut_start) & (df['time_norm'] <= cut_end)].copy()
     df_local_trimmed = df_local[(df_local['time_norm'] >= cut_start) & (df_local['time_norm'] <= cut_end)].copy()
     
     if df_trimmed.empty:
         return df, df_local, t_start, t_end
         
-    # Reset t=0 pada potongan yang baru
     time_offset = df_trimmed['time_norm'].iloc[0]
     df_trimmed['time_norm'] = df_trimmed['time_norm'] - time_offset
     df_local_trimmed['time_norm'] = df_local_trimmed['time_norm'] - time_offset
     
-    # Geser referensi batas shading hijau mengikuti t=0 yang baru
     new_t_start = t_start - time_offset
     new_t_end = t_end - time_offset
     
@@ -102,12 +98,12 @@ def trim_timeseries(df, df_local, t_start, t_end, pre_margin=2.0, post_margin=2.
 def plot_2d_trajectory(df_plot, run_name, out_dir):
     fig, ax = plt.subplots(figsize=(8, 6))
     
-    ax.plot(df_plot['ref_plot_x'], df_plot['ref_plot_y'], 'k--', label='Referensi (Target)', zorder=2)
-    ax.plot(df_plot['act_plot_x'], df_plot['act_plot_y'], 'b-', label='Aktual (Robot)', alpha=0.7, zorder=1)
+    ax.plot(df_plot['ref_plot_x'], df_plot['ref_plot_y'], 'k--', label=r'$p_{ref}$ (Target)', zorder=2)
+    ax.plot(df_plot['act_plot_x'], df_plot['act_plot_y'], 'b-', label=r'$p_{act}$ (Aktual)', alpha=0.7, zorder=1)
     
-    ax.set_title(f"Trajektori Spasial 2D (Whiteboard Frame) - {run_name}")
-    ax.set_xlabel("Local X (mm)")
-    ax.set_ylabel("Local Y (mm)")
+    ax.set_title(rf"Trajektori Spasial Relatif (Kerangka Target) - {run_name}")
+    ax.set_xlabel(r"Posisi Lokal $X$ (mm)")
+    ax.set_ylabel(r"Posisi Lokal $Y$ (mm)")
     ax.legend()
     ax.axis('equal') 
     
@@ -118,33 +114,33 @@ def plot_transient_pose(df_plot, run_name, out_dir, t_start, t_end):
     fig, axes = plt.subplots(3, 1, figsize=(10, 8), sharex=True)
     t = df_plot['time_norm']
     
-    axes[0].plot(t, df_plot['ref_plot_x'], 'k--', label='Ref Local X')
-    axes[0].plot(t, df_plot['act_plot_x'], 'b-', label='Actual Local X', alpha=0.7)
-    axes[0].set_ylabel("Posisi X (mm)")
+    axes[0].plot(t, df_plot['ref_plot_x'], 'k--', label=r'$x_{ref}$')
+    axes[0].plot(t, df_plot['act_plot_x'], 'b-', label=r'$x_{act}$', alpha=0.7)
+    axes[0].set_ylabel(r"Posisi $X$ (mm)")
     axes[0].legend(loc='upper right')
     
-    axes[1].plot(t, df_plot['ref_plot_y'], 'k--', label='Ref Local Y')
-    axes[1].plot(t, df_plot['act_plot_y'], 'g-', label='Actual Local Y', alpha=0.7)
-    axes[1].set_ylabel("Posisi Y (mm)")
+    axes[1].plot(t, df_plot['ref_plot_y'], 'k--', label=r'$y_{ref}$')
+    axes[1].plot(t, df_plot['act_plot_y'], 'g-', label=r'$y_{act}$', alpha=0.7)
+    axes[1].set_ylabel(r"Posisi $Y$ (mm)")
     axes[1].legend(loc='upper right')
     
-    axes[2].plot(t, df_plot['ref_plot_z'], 'k--', label='Ref Local Z')
-    axes[2].plot(t, df_plot['act_plot_z'], 'r-', label='Actual Local Z', alpha=0.7)
-    axes[2].set_ylabel("Posisi Z (mm)")
-    axes[2].set_xlabel("Waktu (s)")
+    axes[2].plot(t, df_plot['ref_plot_z'], 'k--', label=r'$z_{ref}$')
+    axes[2].plot(t, df_plot['act_plot_z'], 'r-', label=r'$z_{act}$', alpha=0.7)
+    axes[2].set_ylabel(r"Posisi $Z$ (mm)")
+    axes[2].set_xlabel(r"Waktu $t$ (s)")
     axes[2].legend(loc='upper right')
     
     if t_start is not None and t_end is not None:
         for ax in axes:
             ax.axvline(t_start, color='gray', linestyle=':', linewidth=1.5)
             ax.axvline(t_end, color='gray', linestyle=':', linewidth=1.5)
-            ax.axvspan(t_start, t_end, color='#00FF00', alpha=0.08, label='Fase Gambar')
+            ax.axvspan(t_start, t_end, color='#00FF00', alpha=0.08, label='Fase Eksekusi Geometri')
             
         handles, labels = axes[0].get_legend_handles_labels()
         by_label = dict(zip(labels, handles))
         axes[0].legend(by_label.values(), by_label.keys(), loc='upper right')
 
-    axes[0].set_title(f"Respons Transien Posisi (Whiteboard Frame) - {run_name}")
+    axes[0].set_title(rf"Respons Transien Posisi Lokal - {run_name}")
     
     fig.savefig(out_dir / f"{run_name}_2_transient_pose.png", dpi=300)
     plt.close(fig)
@@ -153,18 +149,18 @@ def plot_transient_twist(df, run_name, out_dir):
     fig, axes = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
     t = df['time_norm']
     
-    axes[0].plot(t, df['ref_twist_vx'] * 100, 'k--', label='Ref Vx')
-    axes[0].plot(t, df['actual_twist_vx'] * 100, 'b-', label='Actual Vx', alpha=0.7)
-    axes[0].set_ylabel("Kecepatan X (cm/s)")
+    axes[0].plot(t, df['ref_twist_vx'] * 100, 'k--', label=r'$v_{x,ref}$')
+    axes[0].plot(t, df['actual_twist_vx'] * 100, 'b-', label=r'$v_{x,act}$', alpha=0.7)
+    axes[0].set_ylabel(r"Kec. Linier $v_x$ (cm/s)")
     axes[0].legend(loc='upper right')
     
-    axes[1].plot(t, df['ref_twist_vy'] * 100, 'k--', label='Ref Vy')
-    axes[1].plot(t, df['actual_twist_vy'] * 100, 'g-', label='Actual Vy', alpha=0.7)
-    axes[1].set_ylabel("Kecepatan Y (cm/s)")
-    axes[1].set_xlabel("Waktu (s)")
+    axes[1].plot(t, df['ref_twist_vy'] * 100, 'k--', label=r'$v_{y,ref}$')
+    axes[1].plot(t, df['actual_twist_vy'] * 100, 'g-', label=r'$v_{y,act}$', alpha=0.7)
+    axes[1].set_ylabel(r"Kec. Linier $v_y$ (cm/s)")
+    axes[1].set_xlabel(r"Waktu $t$ (s)")
     axes[1].legend(loc='upper right')
     
-    axes[0].set_title(f"Profil Kecepatan Linear (Base Frame) - {run_name}")
+    axes[0].set_title(rf"Profil Kecepatan Kinematik (Kerangka Basis) - {run_name}")
     
     fig.savefig(out_dir / f"{run_name}_3_transient_twist.png", dpi=300)
     plt.close(fig)
@@ -173,22 +169,22 @@ def plot_error_over_time(df, run_name, out_dir, t_start, t_end):
     fig, ax = plt.subplots(figsize=(10, 4))
     t = df['time_norm']
     
-    ax.plot(t, df['error_3d_mm'], 'r-', label='Galat Euclidean 3D')
+    ax.plot(t, df['error_3d_mm'], 'r-', label=r'Galat Posisi 3D Euclidean $\|e_p\|$')
     
     if t_start is not None and t_end is not None:
         ax.axvline(t_start, color='gray', linestyle=':', linewidth=1.5)
         ax.axvline(t_end, color='gray', linestyle=':', linewidth=1.5)
-        ax.axvspan(t_start, t_end, color='#00FF00', alpha=0.08, label='Fase Gambar')
+        ax.axvspan(t_start, t_end, color='#00FF00', alpha=0.08, label='Fase Eksekusi Geometri')
         
         drawing_mask = (t >= t_start) & (t <= t_end)
         mean_error = df.loc[drawing_mask, 'error_3d_mm'].mean()
-        ax.axhline(mean_error, color='k', linestyle='--', label=f"Mean (Drawing Phase): {mean_error:.2f} mm")
+        ax.axhline(mean_error, color='k', linestyle='--', label=rf"Rata-rata (Fase Eksekusi): {mean_error:.2f} mm")
     else:
-        ax.axhline(df['error_3d_mm'].mean(), color='k', linestyle='--', label=f"Mean (All): {df['error_3d_mm'].mean():.2f} mm")
+        ax.axhline(df['error_3d_mm'].mean(), color='k', linestyle='--', label=rf"Rata-rata Keseluruhan: {df['error_3d_mm'].mean():.2f} mm")
     
-    ax.set_title(f"Perkembangan Galat Pelacakan (Tracking Error) - {run_name}")
-    ax.set_xlabel("Waktu (s)")
-    ax.set_ylabel("Galat (mm)")
+    ax.set_title(rf"Perkembangan Galat Pelacakan Spasial - {run_name}")
+    ax.set_xlabel(r"Waktu $t$ (s)")
+    ax.set_ylabel(r"Galat Spasial $\|e_p\|$ (mm)")
     ax.legend(loc='upper right')
     ax.set_ylim(bottom=0)
     
@@ -201,7 +197,10 @@ def process_all_timeseries():
         return
 
     csv_files = list(INPUT_BASE_DIR.rglob("timeseries/*.csv"))
-    print(f"Ditemukan {len(csv_files)} file timeseries untuk diplot.")
+    # Filter hanya untuk Uji 1, 2, 3
+    csv_files = [f for f in csv_files if any(x in f.parent.parent.name for x in ["Uji_1", "Uji_2", "Uji_3"])]
+    
+    print(f"Ditemukan {len(csv_files)} file timeseries Uji 1/2/3 untuk diplot.")
     
     for idx, csv_path in enumerate(csv_files):
         run_name = csv_path.stem.replace("_timeseries", "")
@@ -213,7 +212,6 @@ def process_all_timeseries():
         df_local = transform_to_local_frame(df)
         t_start, t_end = get_drawing_phase_bounds(df_local)
         
-        # Eksekusi pemotongan temporal
         if t_start is not None and t_end is not None:
             df, df_local, t_start, t_end = trim_timeseries(df, df_local, t_start, t_end, pre_margin=2.0, post_margin=2.0)
         
@@ -234,11 +232,12 @@ def plot_summary_trends():
         fig, ax = plt.subplots(figsize=(8, 6))
         for shape in df_mean['Shape'].unique():
             subset = df_mean[df_mean['Shape'] == shape]
-            ax.plot(subset['Speed_cm_s'], subset['CV_Shape_RMSE_mm'], marker='o', label=shape.capitalize())
+            shape_id = "Lingkaran" if shape == "circle" else "Persegi" if shape == "square" else "Segitiga"
+            ax.plot(subset['Speed_cm_s'], subset['CV_Shape_RMSE_mm'], marker='o', label=rf'Geometri {shape_id}')
             
-        ax.set_title("Pengaruh Kecepatan Trajektori terhadap Kualitas Bentuk (Shape RMSE)")
-        ax.set_xlabel("Kecepatan (cm/s)")
-        ax.set_ylabel("CV Shape RMSE (mm)")
+        ax.set_title(r"Tren Degradasi Akurasi Geometri (CV) terhadap Kecepatan Pemakanan (Uji 2)")
+        ax.set_xlabel(r"Kecepatan Eksekusi $v_{feed}$ (cm/s)")
+        ax.set_ylabel(r"Galat Bentuk $RMSE_{shape}$ (mm)")
         ax.legend()
         fig.savefig(INPUT_BASE_DIR / "Plot_Trend_Uji2_Speed.png", dpi=300)
         plt.close(fig)
@@ -249,12 +248,12 @@ def plot_summary_trends():
         df_angle_mean = df_angle.groupby('Pitch').mean(numeric_only=True).reset_index()
         
         fig, ax = plt.subplots(figsize=(8, 6))
-        ax.plot(df_angle_mean['Pitch'], df_angle_mean['CV_Offset_mm'], 'r-o', label='Defleksi Trajektori (Offset)')
-        ax.plot(df_angle_mean['Pitch'], df_angle_mean['CV_Shape_RMSE_mm'], 'b-s', label='Galat Bentuk (Shape RMSE)')
+        ax.plot(df_angle_mean['Pitch'], df_angle_mean['CV_Offset_mm'], 'r-o', label=r'Defleksi Posisi Absolut $\|e_{offset}\|$')
+        ax.plot(df_angle_mean['Pitch'], df_angle_mean['CV_Shape_RMSE_mm'], 'b-s', label=r'Galat Bentuk $RMSE_{shape}$')
         
-        ax.set_title("Pengaruh Kemiringan Papan terhadap Defleksi dan Galat Bentuk")
-        ax.set_xlabel("Sudut Pitch (Derajat)")
-        ax.set_ylabel("Galat CV (mm)")
+        ax.set_title(r"Tren Defleksi dan Galat Bentuk terhadap Sudut Kemiringan Papan (Uji 3)")
+        ax.set_xlabel(r"Sudut Kemiringan Papan $\theta$ (°)")
+        ax.set_ylabel(r"Galat Geometri (mm)")
         ax.legend()
         fig.savefig(INPUT_BASE_DIR / "Plot_Trend_Uji3_Angle.png", dpi=300)
         plt.close(fig)
@@ -262,4 +261,4 @@ def plot_summary_trends():
 if __name__ == "__main__":
     process_all_timeseries()
     plot_summary_trends()
-    print("\nSeluruh plot telah berhasil di-generate dengan Temporal Cropping!")
+    print("\nSeluruh plot Uji 1-3 berhasil digenerate dengan Notasi Akademik!")
